@@ -2,6 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
+import pydeck as pdk
+from plots import create_scatter_plot
+from model import predict_life_expectancy,plot_feature_importance
+from train_model import load_data,train_model
 
 #st.write("Hello, world!")
 #st.write("There is more to it. just HOLD ON!!")
@@ -65,6 +70,90 @@ with tabs[2]:
             mime='text/csv'
         )
 #task 3: deployment: deploy the app on streamlit cloud (see readme: create own github repo with practical.py file and requirements.txt, connect the github to streamlit cloud)
+# Done
+#task 4 in tab 1
+#create a slider to select a certain year, filter the dataset accordingly
+#create 4 key metrics in 4 columns each with a description: 
+#col1: mean of life expectancy; 
+#col2: median of GDP per capita; 
+#col3: mean of headcount_ratio_upper_mid_income_povline; 
+#col4: Number of countries
 
-
+ #create a slider to select a certain year, filter the dataset accordingly
+with tabs[0]:
+    st.title("Global-Overview Key statistics")
+    year_range= st.slider("Select year for visualisation", min_value=int(df['year'].min()), max_value=int(df['year'].max()), value=(int(df['year'].min()), int(df['year'].max())))
+# filtered_data
+    filtered_data = df[df['year'].between(*year_range)]
+    last_year = year_range[1]
     
+# create col for metrics
+    mean_life_expectancy = filtered_data['Life Expectancy (IHME)'].mean()
+    median_gdp_per_capita= filtered_data['GDP per capita'].median()
+    mean_headcount_ratio_upper_mid_income_povline = filtered_data['headcount_ratio_upper_mid_income_povline'].mean()
+    count_countries = filtered_data['country'].nunique()
+
+# create 4 key metrics in 4 columns each with a description
+    col1, col2, col3, col4= st.columns(4)
+    with col1:
+        st.metric(label= "Global average life Expectancy", value=f"{mean_life_expectancy:.0f} years")
+    with col2:    
+        st.metric(label= "Global median GDP per capita", value=f"${median_gdp_per_capita:.0f}")
+    
+    with col3:
+        st.metric(label="Global Poverty Average", value=f"{mean_headcount_ratio_upper_mid_income_povline:.0f}%")
+
+    with col4:
+        st.metric(label="Number of Countries", value=count_countries)
+
+#task 5 in tab 1: in terminal conda install -c plotly plotly
+#create a scatterplot of the dataframe filtered according to the slider: x=GDP per capita, y = Life Expectancy (IHME) with hover, log, size, color, title, labels
+#you might store the code in an extra plots.py file
+
+    scatter_fig = create_scatter_plot(filtered_data,last_year)
+    st.plotly_chart(scatter_fig)
+
+
+#task 6 in tab 1: create a simple model (conda install scikit-learn -y; Randomforest Regressor): 
+# features only 3 columns: ['GDP per capita', 'headcount_ratio_upper_mid_income_povline', 'year']; target: 'Life Expectancy (IHME)'
+#you might store the code in an extra model.py file
+#make input fields for inference of the features (according to existing values in the dataset) and use the model to predict the life expectancy for the input values
+#additional: show the feature importance as a bar plot
+# Load data
+df = load_data('global_development_data.csv')  # Replace with your actual data path
+
+# Train the model (only once; comment this after training)
+#model = train_model(df)
+
+# Load the model
+try:
+    with open('random_forest_model.pkl', 'rb') as f:
+        model = pickle.load(f)
+except FileNotFoundError:
+    st.error("model file not found. please train the model first.")
+
+# Input fields for inference
+st.header("Predict Life Expectancy")
+st.write("This model uses timestamp, GDP per capita, and poverty rates to predict Life Expectancy.")
+st.write("Model Performance")
+mse_value = train_model(df)
+st.write(f"Mean Square error (MSE): {mse_value:.2f}")  # Display MSE
+gdp_per_capita = st.number_input("Enter GDP per capita (dollars):", min_value=0)
+headcount_ratio = st.number_input("ENter poverty rate", min_value=0)
+year = st.number_input("Year of prediction:", min_value=int(df['year'].min()), max_value=int(df['year'].max()))
+
+# Button to predict
+if st.button("Predict"):
+    input_data = [gdp_per_capita, headcount_ratio, year]
+    prediction = predict_life_expectancy(model, input_data)
+    st.write(f"Predicted Life Expectancy (IHME): {prediction[0]:.2f}")
+
+# Show feature importance
+st.subheader("Show Feature Importance")
+importances = model.feature_importances_
+    #st.write("Feature Importances:", importances)  # Check the importances
+plot_feature_importance(model, ['GDP per capita', 'headcount_ratio_upper_mid_income_povline', 'year'])
+
+
+#task 7 in tab 1: create a map plot like the demo in hello streamlit with 3D bars. use chatgpt or similar 
+# to create lat and lon values for each country (e.g. capital as reference)
