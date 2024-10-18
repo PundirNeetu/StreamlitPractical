@@ -4,9 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import pydeck as pdk
-from plots import create_scatter_plot
+from plots import create_scatter_plot,create_3d_bar_plot, load_map_data
 from model import predict_life_expectancy,plot_feature_importance
 from train_model import load_data,train_model
+from map import create_choropleth_map
 
 #st.write("Hello, world!")
 #st.write("There is more to it. just HOLD ON!!")
@@ -157,3 +158,12 @@ plot_feature_importance(model, ['GDP per capita', 'headcount_ratio_upper_mid_inc
 
 #task 7 in tab 1: create a map plot like the demo in hello streamlit with 3D bars. use chatgpt or similar 
 # to create lat and lon values for each country (e.g. capital as reference)
+df_merged = load_map_data(df)
+st.title("3D Bar Map Plot")
+fig = create_3d_bar_plot(df_merged)
+st.plotly_chart(fig)
+
+with tabs[1]:  # Assuming this is where you want the map
+    st.title("Life Expectancy Map")
+    choropleth_fig = create_choropleth_map(df_merged)  # Or use create_marker_map or create_mapbox_map
+    st.plotly_chart(choropleth_fig)
