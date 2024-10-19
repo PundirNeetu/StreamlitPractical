@@ -17,3 +17,6 @@ open Visual studio code
 
 check for streamlit
 `!streamlit hello`
+
+run app using 
+`streamlit src/task.py`
